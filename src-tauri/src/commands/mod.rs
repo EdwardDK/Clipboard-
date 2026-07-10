@@ -53,10 +53,18 @@ pub fn paste_clipboard_item(state: State<'_, crate::AppState>, app: tauri::AppHa
     crate::clipboard::write_text(&content)?;
     if let Some(window) = app.get_webview_window("main") { let _ = window.hide(); }
     let previous = *state.previous_window.lock().map_err(|_| db_error())?;
+    let focus = *state.previous_focus.lock().map_err(|_| db_error())?;
     unsafe {
-        use windows_sys::Win32::{Foundation::HWND, UI::{Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP, VK_CONTROL, VK_V}, WindowsAndMessaging::SetForegroundWindow}};
-        if previous != 0 { SetForegroundWindow(previous as HWND); }
-        std::thread::sleep(std::time::Duration::from_millis(120));
+        use windows_sys::Win32::{Foundation::HWND, System::Threading::{AttachThreadInput, GetCurrentThreadId}, UI::{Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP, SetFocus, VK_CONTROL, VK_V}, WindowsAndMessaging::{GetWindowThreadProcessId, SetForegroundWindow}}};
+        if previous != 0 {
+            let target_thread = GetWindowThreadProcessId(previous as HWND, std::ptr::null_mut());
+            let current_thread = GetCurrentThreadId();
+            let attached = target_thread != 0 && AttachThreadInput(current_thread, target_thread, 1) != 0;
+            SetForegroundWindow(previous as HWND);
+            if focus != 0 { SetFocus(focus as HWND); }
+            if attached { AttachThreadInput(current_thread, target_thread, 0); }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
         keybd_event(VK_CONTROL as u8, 0, 0, 0); keybd_event(VK_V as u8, 0, 0, 0); keybd_event(VK_V as u8, 0, KEYEVENTF_KEYUP, 0); keybd_event(VK_CONTROL as u8, 0, KEYEVENTF_KEYUP, 0);
     }
     Ok(())

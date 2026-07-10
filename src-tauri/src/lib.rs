@@ -13,6 +13,7 @@ pub struct AppState {
     pub database: Mutex<database::Database>,
     pub monitoring_paused: AtomicBool,
     pub previous_window: Mutex<isize>,
+    pub previous_focus: Mutex<isize>,
 }
 
 pub fn run() {
@@ -27,6 +28,7 @@ pub fn run() {
         database: Mutex::new(database),
         monitoring_paused: AtomicBool::new(false),
         previous_window: Mutex::new(0),
+        previous_focus: Mutex::new(0),
     };
 
     let app = tauri::Builder::default()

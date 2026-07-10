@@ -16,8 +16,17 @@ pub fn register_default(app: &AppHandle) -> Result<(), tauri_plugin_global_short
 }
 
 pub fn show_compact_palette(app: &AppHandle) {
-    let previous = unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow() } as isize;
-    if let Ok(mut slot) = app.state::<crate::AppState>().previous_window.lock() { *slot = previous; }
+    unsafe {
+        use windows_sys::Win32::{Foundation::HWND, UI::WindowsAndMessaging::{GetForegroundWindow, GetGUIThreadInfo, GetWindowThreadProcessId, GUITHREADINFO}};
+        let previous = GetForegroundWindow();
+        if let Ok(mut slot) = app.state::<crate::AppState>().previous_window.lock() { *slot = previous as isize; }
+        let mut info: GUITHREADINFO = std::mem::zeroed();
+        info.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
+        let thread = GetWindowThreadProcessId(previous as HWND, std::ptr::null_mut());
+        if GetGUIThreadInfo(thread, &mut info) != 0 {
+            if let Ok(mut slot) = app.state::<crate::AppState>().previous_focus.lock() { *slot = info.hwndFocus as isize; }
+        }
+    }
     show(app, 620.0, 520.0, true);
 }
 
