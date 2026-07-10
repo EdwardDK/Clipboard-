@@ -88,6 +88,7 @@ impl Database {
         for (version, sql) in [
             (1, include_str!("../../migrations/0001_initial.sql")),
             (2, include_str!("../../migrations/0002_milestone2.sql")),
+            (3, include_str!("../../migrations/0003_default_groups.sql")),
         ] {
             let applied: Option<i64> = connection
                 .query_row(
@@ -138,7 +139,8 @@ impl Database {
         if let Some(id) = existing {
             self.connection.execute("UPDATE clipboard_items SET last_copied_at=?1, copy_count=copy_count+1, source_application=COALESCE(?2,source_application), window_title=COALESCE(?3,window_title) WHERE id=?4",params![now,context.source_application,context.window_title,id])?;
         } else {
-            self.connection.execute("INSERT INTO clipboard_items(id,content,content_type,source_application,window_title,created_at,last_copied_at,copy_count,pinned,sensitive,backup_eligible,content_hash) VALUES(?1,?2,?3,?4,?5,?6,?6,1,0,0,1,?7)",params![Uuid::new_v4().to_string(),content,content_type,context.source_application,context.window_title,now,hash])?;
+            let group_id = automatic_group_id(&content_type, context.source_application.as_deref());
+            self.connection.execute("INSERT INTO clipboard_items(id,content,content_type,source_application,window_title,created_at,last_copied_at,copy_count,pinned,group_id,sensitive,backup_eligible,content_hash) VALUES(?1,?2,?3,?4,?5,?6,?6,1,0,?7,0,1,?8)",params![Uuid::new_v4().to_string(),content,content_type,context.source_application,context.window_title,now,group_id,hash])?;
         }
         self.cleanup()?;
         Ok(())
@@ -407,4 +409,19 @@ fn fts_query(q: &str) -> String {
         .map(|t| format!("\"{t}\"*", t = t.replace('"', "")))
         .collect::<Vec<_>>()
         .join(" AND ")
+}
+
+fn automatic_group_id(
+    content_type: &str,
+    source_application: Option<&str>,
+) -> Option<&'static str> {
+    if content_type == "url" {
+        Some("system-links")
+    } else if content_type == "code"
+        || source_application.is_some_and(|app| app.eq_ignore_ascii_case("Code.exe"))
+    {
+        Some("system-code")
+    } else {
+        None
+    }
 }
