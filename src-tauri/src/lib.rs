@@ -47,6 +47,7 @@ pub fn run() {
             commands::delete_clipboard_item,
             commands::clear_clipboard_history,
             commands::set_item_pinned,
+            commands::reorder_pinned_items,
             commands::assign_item_group,
             commands::update_clipboard_item,
             commands::list_groups,

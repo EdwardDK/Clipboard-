@@ -79,6 +79,18 @@ pub fn set_item_pinned(
         .map_err(|_| db_error())
 }
 #[tauri::command]
+pub fn reorder_pinned_items(
+    state: State<'_, crate::AppState>,
+    ids: Vec<String>,
+) -> Result<(), String> {
+    state
+        .database
+        .lock()
+        .map_err(|_| db_error())?
+        .reorder_pins(&ids)
+        .map_err(|_| input_error())
+}
+#[tauri::command]
 pub fn assign_item_group(
     state: State<'_, crate::AppState>,
     id: String,

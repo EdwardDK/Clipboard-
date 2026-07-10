@@ -258,6 +258,20 @@ impl Database {
         }
         Ok(())
     }
+    pub fn reorder_pins(&mut self, ids: &[String]) -> Result<(), DatabaseError> {
+        let tx = self.connection.transaction()?;
+        for (index, id) in ids.iter().enumerate() {
+            if tx.execute(
+                "UPDATE clipboard_items SET pin_order=?1 WHERE id=?2 AND pinned=1",
+                params![index as i64 + 1, id],
+            )? != 1
+            {
+                return Err(DatabaseError::InvalidInput);
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
     pub fn update(
         &mut self,
         id: &str,

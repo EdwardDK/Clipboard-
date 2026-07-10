@@ -8,6 +8,7 @@ interface State {
   setQuery(query: string): void; setFilters(filters: ClipboardFilters): void; setSelectedId(id: string | null): void;
   refresh(): Promise<void>; loadGroups(): Promise<void>; copy(id: string): Promise<void>; remove(id: string): Promise<void>;
   pin(id: string, pinned: boolean): Promise<void>; assignGroup(id: string, groupId: string | null): Promise<void>;
+  movePin(id: string, direction: -1 | 1): Promise<void>;
   createGroup(name: string): Promise<void>; saveSettings(settings: RetentionSettings): Promise<void>; clear(): Promise<void>;
 }
 export const useClipboardStore = create<State>((set, get) => ({
@@ -16,6 +17,7 @@ export const useClipboardStore = create<State>((set, get) => ({
   refresh: async () => { set({ loading: true }); try { const [items, paused] = await Promise.all([clipboardApi.list({ query: get().query, filters: get().filters, limit: 200 }), clipboardApi.isPaused()]); set({ items, paused, selectedId: items.some((item) => item.id === get().selectedId) ? get().selectedId : items[0]?.id ?? null }); } catch { set({ error: 'Clipboard+ could not reach its local service.' }); } finally { set({ loading: false }); } },
   loadGroups: async () => { try { set({ groups: await clipboardApi.groups() }); } catch { /* history remains usable */ } }, copy: (id) => clipboardApi.copy(id),
   remove: async (id) => { await clipboardApi.delete(id); await get().refresh(); }, pin: async (id, pinned) => { await clipboardApi.pin(id, pinned); await get().refresh(); },
+  movePin: async (id, direction) => { const ids = get().items.filter((item) => item.pinned).map((item) => item.id); const index = ids.indexOf(id); const target = index + direction; if (index < 0 || target < 0 || target >= ids.length) return; [ids[index], ids[target]] = [ids[target], ids[index]]; await clipboardApi.reorderPins(ids); await get().refresh(); },
   assignGroup: async (id, groupId) => { await clipboardApi.assignGroup(id, groupId); await Promise.all([get().refresh(), get().loadGroups()]); }, createGroup: async (name) => { await clipboardApi.createGroup(name); await get().loadGroups(); },
   saveSettings: async (settings) => { await clipboardApi.saveSettings(settings); set({ settings }); }, clear: async () => { await clipboardApi.clear(); await get().refresh(); },
 }));
