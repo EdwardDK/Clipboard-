@@ -2,6 +2,7 @@ mod clipboard;
 mod commands;
 mod database;
 mod search;
+mod security;
 mod shortcuts;
 mod tray;
 
