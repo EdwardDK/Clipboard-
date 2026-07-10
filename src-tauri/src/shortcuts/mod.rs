@@ -16,19 +16,21 @@ pub fn register_default(app: &AppHandle) -> Result<(), tauri_plugin_global_short
 }
 
 pub fn show_compact_palette(app: &AppHandle) {
-    show(app, 620.0, 520.0);
+    let previous = unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow() } as isize;
+    if let Ok(mut slot) = app.state::<crate::AppState>().previous_window.lock() { *slot = previous; }
+    show(app, 620.0, 520.0, true);
 }
 
 pub fn show_full_workspace(app: &AppHandle) {
-    show(app, 980.0, 650.0);
+    show(app, 980.0, 650.0, false);
 }
 
-fn show(app: &AppHandle, width: f64, height: f64) {
+fn show(app: &AppHandle, width: f64, height: f64, compact: bool) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_size(Size::Logical(LogicalSize::new(width, height)));
         let _ = window.center();
         let _ = window.show();
         let _ = window.set_focus();
-        let _ = window.emit("palette-opened", ());
+        let _ = window.emit("palette-opened", compact);
     }
 }

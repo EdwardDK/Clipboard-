@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::sync::atomic::Ordering;
-use tauri::State;
+use tauri::{Manager, State};
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardQuery {
@@ -46,6 +46,20 @@ pub fn copy_clipboard_item(state: State<'_, crate::AppState>, id: String) -> Res
         .map_err(|_| db_error())?
         .ok_or("Clipboard item not found.")?;
     crate::clipboard::write_text(&content)
+}
+#[tauri::command]
+pub fn paste_clipboard_item(state: State<'_, crate::AppState>, app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let content = state.database.lock().map_err(|_| db_error())?.content_by_id(&id).map_err(|_| db_error())?.ok_or("Clipboard item not found.")?;
+    crate::clipboard::write_text(&content)?;
+    if let Some(window) = app.get_webview_window("main") { let _ = window.hide(); }
+    let previous = *state.previous_window.lock().map_err(|_| db_error())?;
+    unsafe {
+        use windows_sys::Win32::{Foundation::HWND, UI::{Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP, VK_CONTROL, VK_V}, WindowsAndMessaging::SetForegroundWindow}};
+        if previous != 0 { SetForegroundWindow(previous as HWND); }
+        std::thread::sleep(std::time::Duration::from_millis(120));
+        keybd_event(VK_CONTROL as u8, 0, 0, 0); keybd_event(VK_V as u8, 0, 0, 0); keybd_event(VK_V as u8, 0, KEYEVENTF_KEYUP, 0); keybd_event(VK_CONTROL as u8, 0, KEYEVENTF_KEYUP, 0);
+    }
+    Ok(())
 }
 #[tauri::command]
 pub fn delete_clipboard_item(state: State<'_, crate::AppState>, id: String) -> Result<(), String> {

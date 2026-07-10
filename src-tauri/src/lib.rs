@@ -12,6 +12,7 @@ use tauri::WindowEvent;
 pub struct AppState {
     pub database: Mutex<database::Database>,
     pub monitoring_paused: AtomicBool,
+    pub previous_window: Mutex<isize>,
 }
 
 pub fn run() {
@@ -25,6 +26,7 @@ pub fn run() {
     let state = AppState {
         database: Mutex::new(database),
         monitoring_paused: AtomicBool::new(false),
+        previous_window: Mutex::new(0),
     };
 
     let app = tauri::Builder::default()
@@ -45,6 +47,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_clipboard_items,
             commands::copy_clipboard_item,
+            commands::paste_clipboard_item,
             commands::delete_clipboard_item,
             commands::clear_clipboard_history,
             commands::set_item_pinned,
