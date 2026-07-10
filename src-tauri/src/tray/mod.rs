@@ -22,7 +22,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<()> {
         .menu(&menu)
         .tooltip("Clipboard+")
         .on_menu_event(|app, event| match event.id().as_ref() {
-            "open" => crate::shortcuts::show_palette(app),
+            "open" => crate::shortcuts::show_full_workspace(app),
             "pause" => {
                 let state = app.state::<crate::AppState>();
                 state.monitoring_paused.fetch_xor(true, Ordering::Relaxed);
@@ -42,7 +42,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<()> {
                 ..
             } = event
             {
-                crate::shortcuts::show_palette(tray.app_handle());
+                crate::shortcuts::show_full_workspace(tray.app_handle());
             }
         })
         .build(app)?;
