@@ -1,6 +1,6 @@
 [package]
 name = "clipboard-plus"
-version = "0.1.0"
+version = "0.1.1"
 description = "Private local clipboard manager"
 edition = "2021"
 
